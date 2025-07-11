@@ -1,30 +1,41 @@
 #!/bin/bash
 
-echo "Loadd latest repo files"
-baseurl="https://deb.mirror.yandex.ru/ubuntu/"
+echo "Load latest repo files"
 
+baseurl="https://deb.mirror.yandex.ru/ubuntu/"
+basedir="/var/www/"
+distr="noble"
+destdir="myrepo"
 
 #set -x
 #set -e
 
-# load the list of packages
-wget -P /tmp https://deb.mirror.yandex.ru/ubuntu/dists/noble/main/binary-amd64/Packages.gz
+# load the index file of packages
+if ! wget -P /tmp $baseurl/dists/$distr/main/binary-amd64/Packages.gz; then
+  echo "Error while loading index-file"; exit 1
+fi
 
 gzip -fd /tmp/Packages.gz
 
 pkgs=$( sed -n 's/Filename: //p' /tmp/Packages )
 pkgscnt=$( echo "$pkgs" | wc -l )
-echo "Total packeges for upgrade is "$pkgscnt
+echo "Total packages for upgrade is "$pkgscnt
 
-#for url in $( sed -n 's/Filename: //p' /tmp/Packages | head -n 2 )
-#for url in $pkgs
-echo "$pkgs" | while read -r url;
-do
-
+echo "$pkgs" | while read -r url; do
+  # Indicator of progress
   #echo "Load a package: "$url
-  mkdir -p $( dirname $url )
+
+  # Dest package full name
+  fullname=$basedir$destdir"/"$url
+  fullpath=$( dirname $fullname )
+ 
+  # Creates the same struct as on the server
+  mkdir -p $fullpath 
+
+  # load the package. 
+  curl -o $fullname -O $baseurl$url
   #curl -o "./"$url -O $baseurl$url
-  curl -sSf $baseurl$url -o "./$url"
+  #curl -sSf $baseurl$url -o "./$url"
 done
 
 
