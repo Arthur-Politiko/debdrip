@@ -1,4 +1,23 @@
 #!/bin/bash
+
+#--------------------------------------------------
+# Functions
+#--------------------------------------------------
+function vecho() { [ $verbose -eq 1 ] && echo "$@" || true; }
+
+#set -x
+#set -e
+function showProgress() { 
+  rep() { seq -s $2 $1 | tr -d '[:digit:]'; } # Generate a string of repeated characters
+  [ $# -eq 0 ] || [ $# -gt 2 ] && return 
+  [ $# -eq 1 ] && percent=$1 || percent=$(( $2 * 100 / $1 ))
+  width=$(( $(tput cols) - 4)) # Get terminal width
+  completed=$( rep $(($width * $percent / 100)) "#" )
+  remaining=$( rep $(($width * (100 - $percent) / 100 )) "-" )
+  progress_bar=$completed$remaining
+  echo -ne "\033[2K$percent: [$progress_bar]\r" # \033[2K - Clear the line
+}
+
 #--------------------------------------------------
 # Default configuration
 # 
@@ -8,18 +27,9 @@ basedir="/var/www/"
 distr="noble"
 index_url=""
 destdir="myrepo"
-verbose=0
-
-#--------------------------------------------------
-# Overload a few commands
-#
-#--------------------------------------------------
-#alias vecho="[ $verbose -eq 1 ] && echo "$@" || true"
-vecho() { [ $verbose -eq 1 ] && echo "$@" || true; }
+verbose=1
 
 vecho "Load latest repo files"
-#set -x
-#set -e
 
 #--------------------------------------------------
 # Parsing input parameters
@@ -83,13 +93,18 @@ $( ! curl -so /tmp/Packages.gz -f $index_url ) && {
 #--------------------------------------------------
 gzip -fd /tmp/Packages.gz
 
+
+#--------------------------------------------------
+# Read the index file and download packages
+#
+#--------------------------------------------------
 pkgs=$( sed -n 's/Filename: //p' /tmp/Packages )
 pkgscnt=$( echo "$pkgs" | wc -l )
 vecho "Total packages for upgrade is $pkgscnt"
-
+i=0
 echo "$pkgs" | while read -r pkgs_url; do
   # Indicator of progress
-  vecho "Load a package: "$pkgs_url
+  showProgress $pkgscnt $((++i))
 
   # Dest package full name
   fullname="$basedir$destdir/$pkgs_url"
@@ -100,6 +115,6 @@ echo "$pkgs" | while read -r pkgs_url; do
 
   # load the package. 
   curl -so "$fullname" -O "$repo_url$pkgs_url"
-  #curl -o "./"$url -O $baseurl$url
-  #curl -sf $baseurl$url -o "./$url"
 done
+
+vecho "All packages loaded successfully."
