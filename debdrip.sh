@@ -114,7 +114,9 @@ echo "$pkgs" | while read -r pkgs_url; do
   mkdir -p "$fullpath" 
 
   # load the package. 
-  curl -so "$fullname" -O "$repo_url$pkgs_url"
+  #vecho "Full path: $fullname"
+  #vecho "Repository URL: $repo_url/$pkgs_url"
+  curl -so "$fullname" -O "$repo_url/$pkgs_url"
 done
 
 vecho "All packages loaded successfully."
